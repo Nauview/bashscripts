@@ -1,10 +1,19 @@
-#!/bin/bash 
+#!/bin/bash
+echo "sudo executions (following)"
+echo
 
-echo "Checking for sudo executions"
-echo "============================="
-sleep 2
-echo "sudo executions found:"
-echo ""
-sudo tail -n 10 -f /var/log/secure | egrep "(pam_unix)" | awx '{ print $}
+# ejecútalo con sudo:  sudo ./sudoexecutions.sh
+ tail -n10 -F /var/log/secure |
+awk '
+/pam_unix\(sudo:session\)/ {
+  ts = sprintf("%s %s %s", $1, $2, $3)   # fecha/hora del syslog
+  line = $0
 
+  act  = ( match(line, /session (opened|closed)/, m) ? m[1] : "unknown" )
+  tgt  = ( match(line, /user ([^ ]+)\(uid=/, u)    ? u[1] : "?" )        # usuario objetivo (root)
+  by   = ( match(line, /by ([^ ]+)\(uid=/, b)      ? b[1] : 
+           (match(line, /by ([^ ]+)/, b) ? b[1] : "?") )                 # quién ejecutó sudo
+
+  printf "%s | %-6s | user=%s | by=%s\n", ts, act, tgt, by
+}'
 
